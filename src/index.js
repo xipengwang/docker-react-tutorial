@@ -1,20 +1,15 @@
 // src/index.js
 import React from "react";
 import ReactDOM from "react-dom";
-import Particles from './particle';
+import Example from "./particle";
 
-// Create an 'App' component that renders a regl frame and
-// renders the triangle draw call
-const App = () => {
+function App() {
   return (
-    <Particles />
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <Example />
+    </div>
   );
-};
+}
 
-// Mount React and render the App component
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+const rootElement = document.getElementById("root");
+ReactDOM.render(<App />, rootElement);

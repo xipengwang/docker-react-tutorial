@@ -1,108 +1,53 @@
-import React from 'react'
-import regl, { ReglFrame } from 'react-regl';
-import { mat4 } from 'gl-matrix';
-import hsv2rgb from 'hsv2rgb';
+import React from "react";
+import Worldview, { Spheres, Axes } from "regl-worldview";
 
-const NUM_POINTS = 1e4
-const VERT_SIZE = 4 * (4 + 4 + 3)
+function Example() {
+  const steps = 500; // total number of objects
 
-const pointBuffer = regl.buffer(Array(NUM_POINTS).fill(0).map(function () {
-  const color = hsv2rgb(Math.random() * 360, 0.6, 1)
-  return [
-    // freq
-    Math.random() * 10,
-    Math.random() * 10,
-    Math.random() * 10,
-    Math.random() * 10,
-    // phase
-    2.0 * Math.PI * Math.random(),
-    2.0 * Math.PI * Math.random(),
-    2.0 * Math.PI * Math.random(),
-    2.0 * Math.PI * Math.random(),
-    // color
-    color[0] / 255, color[1] / 255, color[2] / 255
-  ]
-}))
+  // map a number/index to a specific color
+  function numberToColor(number, max, a = 1) {
+    const i = (number * 255) / max;
+    const r = Math.round(Math.sin(0.024 * i + 0) * 127 + 128) / 255;
+    const g = Math.round(Math.sin(0.024 * i + 2) * 127 + 128) / 255;
+    const b = Math.round(Math.sin(0.024 * i + 4) * 127 + 128) / 255;
+    return { r, g, b, a };
+  }
 
-const DrawParticles = regl({
-  vert: `
-  precision mediump float;
-  attribute vec4 freq, phase;
-  attribute vec3 color;
-  uniform float time;
-  uniform mat4 view, projection;
-  varying vec3 fragColor;
-  void main() {
-    vec3 position = 8.0 * cos(freq.xyz * time + phase.xyz);
-    gl_PointSize = 5.0 * (1.0 + cos(freq.w * time + phase.w));
-    gl_Position = projection * view * vec4(position, 1);
-    fragColor = color;
-  }`,
+  // the object index needs to be multipled by this scale so it's evenly distributed in the space
+  const scale = (Math.PI * 2) / steps;
 
-  frag: `
-  precision lowp float;
-  varying vec3 fragColor;
-  void main() {
-    if (length(gl_PointCoord.xy - 0.5) > 0.5) {
-      discard;
-    }
-    gl_FragColor = vec4(fragColor, 1);
-  }`,
-
-  attributes: {
-    freq: {
-      buffer: pointBuffer,
-      stride: VERT_SIZE,
-      offset: 0
+  const sphereMarker = {
+    pose: {
+      orientation: { x: 0, y: 0, z: 0, w: 1 },
+      position: { x: 0, y: 0, z: 0 },
     },
-    phase: {
-      buffer: pointBuffer,
-      stride: VERT_SIZE,
-      offset: 16
-    },
-    color: {
-      buffer: pointBuffer,
-      stride: VERT_SIZE,
-      offset: 32
-    }
-  },
+    scale: { x: 1, y: 1, z: 1 },
+    // leave colors and points empty so we can fill up later
+    colors: [],
+    points: [],
+  };
 
-  uniforms: {
-    view: ({tick}) => {
-      const t = 0.01 * tick
-      return mat4.lookAt(
-        mat4.create(),
-        [30 * Math.cos(t), 2.5, 30 * Math.sin(t)],
-        [0, 0, 0],
-        [0, 1, 0]
-      )
-    },
-    projection: ({viewportWidth, viewportHeight}) =>
-      mat4.perspective(
-        mat4.create(),
-        Math.PI / 4,
-        viewportWidth / viewportHeight,
-        0.01,
-        1000
-      ),
-    time: ({tick}) => tick * 0.001
-  },
+  new Array(steps)
+    .fill()
+    .map((_, idx) => [
+      // generate x, y, z coordinates based on trefoil equation
+      Math.sin(idx * scale) + 2 * Math.sin(2 * idx * scale),
+      Math.cos(idx * scale) - 2 * Math.cos(2 * idx * scale),
+      -Math.sin(3 * idx * scale),
+    ])
 
-  count: NUM_POINTS,
+    .forEach(([x, y, z], idx) => {
+      // add individual point and color to the single sphere object
+      sphereMarker.colors.push(numberToColor(idx, steps));
+      sphereMarker.points.push({ x: x * 20, y: y * 20, z: z * 20 });
+    });
 
-  primitive: 'points'
-})
-
-const Particles = () => {
   return (
-    <ReglFrame
-      onFrame={(context, regl) => regl.clear({
-        color: [0,0,0,1],
-        depth:1
-      })}>
-      <DrawParticles />
-    </ReglFrame>
+    <Worldview>
+      <Spheres>{[sphereMarker]}</Spheres>
+      <Axes />
+    </Worldview>
   );
-};
+}
 
-export default Particles;
+export default Example;
